@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Source from '@/models/Source';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+type RouteParams = { params: Promise<{ id: string }> };
+
+export async function PUT(req: Request, { params }: RouteParams) {
     try {
         await dbConnect();
         const body = await req.json();
-        const { id } = params;
+        const { id } = await params;
 
         const source = await Source.findByIdAndUpdate(id, body, {
             new: true,
@@ -23,10 +25,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: RouteParams) {
     try {
         await dbConnect();
-        const { id } = params;
+        const { id } = await params;
 
         const source = await Source.findByIdAndDelete(id);
 

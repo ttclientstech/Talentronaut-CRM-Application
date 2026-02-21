@@ -15,17 +15,17 @@ export async function POST() {
                 message: 'Admin already exists',
                 admin: {
                     email: existingAdmin.email,
-                    accessToken: existingAdmin.accessToken
+                    accessCode: existingAdmin.accessCode
                 }
             });
         }
 
-        const adminToken = uuidv4();
+        const adminCode = uuidv4();
         const admin = await User.create({
             name: 'Super Admin',
             email: adminEmail,
             role: 'Admin',
-            accessToken: adminToken, // In prod, this should be shown once and maybe hashed, but per requirements we store it.
+            accessCode: adminCode,
             status: 'Active'
         });
 
@@ -33,7 +33,7 @@ export async function POST() {
             message: 'Admin created successfully',
             admin: {
                 email: admin.email,
-                accessToken: admin.accessToken
+                accessCode: admin.accessCode
             }
         });
     } catch (error: any) {
