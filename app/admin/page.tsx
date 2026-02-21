@@ -137,7 +137,7 @@ export default function AdminDashboardPage() {
                         label: 'Conversion Rate',
                         value: `${data?.stats.conversionRate ?? '0'}%`,
                         icon: TrendingUp,
-                        sub: 'Closed + Qualified',
+                        sub: 'Won leads',
                         color: 'text-emerald-600',
                         bg: 'bg-emerald-50',
                     },
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
                         label: 'Revenue Pipeline',
                         value: formatCurrency(data?.stats.revenuePipeline ?? 0),
                         icon: DollarSign,
-                        sub: 'From closed leads',
+                        sub: 'From won leads',
                         color: 'text-primary',
                         bg: 'bg-primary/5',
                     },
@@ -232,9 +232,11 @@ export default function AdminDashboardPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                                 <XAxis
                                     dataKey="date"
-                                    tick={{ fontSize: 11, fontWeight: 700, fill: '#9ca3af' }}
+                                    tick={{ fontSize: 10, fontWeight: 700, fill: '#9ca3af' }}
                                     axisLine={false}
                                     tickLine={false}
+                                    interval="preserveEnd"
+                                    minTickGap={10}
                                 />
                                 <YAxis
                                     allowDecimals={false}

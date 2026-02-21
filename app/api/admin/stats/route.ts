@@ -14,15 +14,14 @@ export async function GET(request: Request) {
 
         // 1. Global Stats
         const totalLeads = await Lead.countDocuments();
-        const closedLeads = await Lead.countDocuments({ status: 'Closed' });
-        const qualifiedLeads = await Lead.countDocuments({ status: 'Qualified' });
+        const wonLeads = await Lead.countDocuments({ status: 'Won' });
 
         const conversionRate = totalLeads > 0
-            ? ((closedLeads + qualifiedLeads) / totalLeads) * 100
+            ? (wonLeads / totalLeads) * 100
             : 0;
 
         const revenuePipeline = await Lead.aggregate([
-            { $match: { status: 'Closed' } },
+            { $match: { status: 'Won' } },
             { $group: { _id: null, total: { $sum: '$value' } } }
         ]);
 
@@ -86,8 +85,8 @@ export async function GET(request: Request) {
                     activeLeads: {
                         $sum: { $cond: [{ $in: ['$status', ['New', 'Contacted', 'Qualified']] }, 1, 0] }
                     },
-                    closedLeads: {
-                        $sum: { $cond: [{ $eq: ['$status', 'Closed'] }, 1, 0] }
+                    wonLeads: {
+                        $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] }
                     },
                     total: { $sum: 1 }
                 }
@@ -99,7 +98,7 @@ export async function GET(request: Request) {
                     closureRate: {
                         $cond: [
                             { $gt: ['$total', 0] },
-                            { $multiply: [{ $divide: ['$closedLeads', '$total'] }, 100] },
+                            { $multiply: [{ $divide: ['$wonLeads', '$total'] }, 100] },
                             0
                         ]
                     }

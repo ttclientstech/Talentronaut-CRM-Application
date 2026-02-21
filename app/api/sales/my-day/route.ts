@@ -34,7 +34,7 @@ export async function GET() {
         // 3. Simple stats for Sales Member
         const stats = {
             totalAssigned: await Lead.countDocuments({ assignedTo: userId }),
-            convertedLeads: await Lead.countDocuments({ assignedTo: userId, status: 'Closed' }),
+            convertedLeads: await Lead.countDocuments({ assignedTo: userId, status: 'Won' }),
             leadsToday: assignedToday.length
         };
 
