@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Plus, Loader2, Mail, Phone } from 'lucide-react';
 import FolderCard from '@/components/Common/FolderCard';
-import LeadDetailPanel from '@/components/LeadDetailPanel';
-import { X } from 'lucide-react';
 
 type Level = 'domains' | 'campaigns' | 'sources' | 'leads';
 
@@ -15,6 +14,7 @@ interface Breadcrumb {
 }
 
 export default function ConfigurationPage() {
+    const router = useRouter();
     const [level, setLevel] = useState<Level>('domains');
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -24,7 +24,6 @@ export default function ConfigurationPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newItemName, setNewItemName] = useState('');
     const [creating, setCreating] = useState(false);
-    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
     const fetchItems = async () => {
         setLoading(true);
@@ -57,16 +56,24 @@ export default function ConfigurationPage() {
     }, [level, breadcrumbs]);
 
     const navigateTo = (nextLevel: Level, id: string, name: string) => {
-        setSelectedLeadId(null);
         setBreadcrumbs([...breadcrumbs, { name, level: nextLevel, id }]);
         setLevel(nextLevel);
     };
 
     const handleBreadcrumbClick = (index: number) => {
-        setSelectedLeadId(null);
         const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
         setBreadcrumbs(newBreadcrumbs);
         setLevel(newBreadcrumbs[newBreadcrumbs.length - 1].level);
+    };
+
+    // Navigate to lead detail page within admin layout, passing breadcrumb context
+    const navigateToLead = (leadId: string) => {
+        // breadcrumbs: [Domains, domainName, campaignName, sourceName]
+        const domain = breadcrumbs[1]?.name || '';
+        const campaign = breadcrumbs[2]?.name || '';
+        const source = breadcrumbs[3]?.name || '';
+        const params = new URLSearchParams({ domain, campaign, source });
+        router.push(`/admin/leads/${leadId}?${params.toString()}`);
     };
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -171,10 +178,10 @@ export default function ConfigurationPage() {
                         <thead className="bg-gray-50/50 border-b border-gray-100">
                             <tr>
                                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Prospect</th>
-                                {!selectedLeadId && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Company</th>}
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Company</th>
                                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Status</th>
-                                {!selectedLeadId && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Assigned</th>}
-                                {!selectedLeadId && <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>}
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Assigned</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Contact</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -192,10 +199,9 @@ export default function ConfigurationPage() {
                             ) : (
                                 items.map((lead) => {
                                     const s = statusConfig[lead.status] || statusConfig['New'];
-                                    const isSelected = selectedLeadId === lead._id;
                                     return (
                                         <tr key={lead._id}
-                                            onClick={() => setSelectedLeadId(lead._id)}
+                                            onClick={() => navigateToLead(lead._id)}
                                             className="hover:bg-gray-50/40 transition-colors cursor-pointer">
                                             {/* Prospect */}
                                             <td className="px-6 py-4">
@@ -295,27 +301,7 @@ export default function ConfigurationPage() {
             )
             }
 
-            {/* Lead Detail Modal */}
-            {
-                selectedLeadId && (
-                    <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-                        onClick={() => setSelectedLeadId(null)}
-                    >
-                        <div
-                            className="relative w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl overflow-hidden"
-                            style={{ height: '90vh' }}
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <LeadDetailPanel
-                                leadId={selectedLeadId}
-                                onClose={() => setSelectedLeadId(null)}
-                                onDeleted={() => { setSelectedLeadId(null); fetchItems(); }}
-                            />
-                        </div>
-                    </div>
-                )
-            }
+
 
             {/* Create Modal */}
             {
