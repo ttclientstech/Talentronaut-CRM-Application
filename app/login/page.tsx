@@ -26,24 +26,30 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         setError('');
-        console.log('Logging in with token:', token);
 
         try {
-            // Sign in using only the accessToken
             const result = await signIn('credentials', {
                 redirect: false,
                 accessCode: token,
             });
 
             if (result?.error) {
-                setError(result.error);
-            } else {
-                // The useEffect will handle the redirection once status becomes 'authenticated'
-                // but we can also be proactive here if we had the session
-                router.refresh();
+                setError('Invalid access code. Please try again.');
+            } else if (result?.ok) {
+                // Immediately fetch the session to get the role — don't rely on useEffect
+                const { getSession } = await import('next-auth/react');
+                const session = await getSession();
+                if (session?.user?.role === 'Admin') {
+                    window.location.href = '/admin';
+                } else if (session?.user?.role === 'Sales Person') {
+                    window.location.href = '/sales';
+                } else {
+                    // Fallback: refresh and let useEffect handle it
+                    router.refresh();
+                }
             }
         } catch (err) {
-            setError('An unexpected error occurred');
+            setError('An unexpected error occurred. Please try again.');
         } finally {
             setLoading(false);
         }
