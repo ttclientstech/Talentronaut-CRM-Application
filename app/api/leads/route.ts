@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Lead from '@/models/Lead';
+import '@/models/Source'; // register for Lead.populate
+import '@/models/User';   // register for Lead.populate
+
 
 export async function GET(req: Request) {
     try {

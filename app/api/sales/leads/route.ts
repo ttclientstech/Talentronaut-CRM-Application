@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/db';
 import Lead from '@/models/Lead';
+import '@/models/Source'; // register for Lead.populate('source')
+import '@/models/User';   // register for Lead.populate('assignedTo')
+
 
 export async function GET() {
     try {

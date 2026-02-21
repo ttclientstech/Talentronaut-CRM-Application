@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/db';
 import Lead from '@/models/Lead';
+import '@/models/Source'; // register Source schema for Lead.populate('source')
 import { startOfDay, endOfDay } from 'date-fns';
 
 export async function GET() {
