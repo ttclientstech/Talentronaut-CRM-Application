@@ -4,6 +4,9 @@ import Lead from '@/models/Lead';
 import Source from '@/models/Source';
 import Campaign from '@/models/Campaign';
 import Domain from '@/models/Domain';
+import User from '@/models/User';
+import Notification from '@/models/Notification';
+import { sendEmailNotification } from '@/lib/emailService';
 
 // ─── CORS headers for cross-origin requests from the public website ───
 const CORS_HEADERS = {
@@ -129,6 +132,45 @@ export async function POST(req: Request) {
         });
 
         console.log(`✅ Webhook lead created: ${lead._id} | ${domainName} → ${campaignName} → ${SOURCE_NAME}`);
+
+        // 4. Send Notifications (In-App & Email)
+        try {
+            // Find admins and sales team members to notify
+            // For now, notify all Admins
+            const admins = await User.find({ role: { $in: ['Admin', 'Administrator'] }, status: { $ne: 'Inactive' } });
+
+            if (admins.length > 0) {
+                const notificationsToInsert = admins.map(admin => ({
+                    userId: admin._id,
+                    title: `New Lead: ${firstName} ${lastName}`,
+                    message: `A new lead just registered from the website for ${domainName}.`,
+                    type: 'Lead',
+                    link: `/admin/leads/${lead._id}`,
+                }));
+
+                await Notification.insertMany(notificationsToInsert);
+
+                const adminEmails = admins.map(a => a.email);
+                const emailHtml = `
+                    <h2>New Lead Received!</h2>
+                    <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Domain:</strong> ${domainName}</p>
+                    <br/>
+                    <a href="${process.env.NEXTAUTH_URL}/admin/leads/${lead._id}">Click here to view lead in CRM</a>
+                `;
+
+                if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+                    await sendEmailNotification(
+                        adminEmails,
+                        `New Lead Alert: ${firstName} ${lastName}`,
+                        emailHtml
+                    );
+                }
+            }
+        } catch (notifErr) {
+            console.error('Error sending lead notifications:', notifErr);
+        }
 
         return NextResponse.json(
             {
