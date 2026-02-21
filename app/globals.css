@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-body: var(--font-body), "Plus Jakarta Sans", sans-serif;
+  --font-brand: var(--font-brand), "Playfair Display", serif;
+}
+
+:root {
+  --background: #fafcff;
+  --foreground: #03060d;
+  --card: #ffffff;
+  --card-foreground: #03060d;
+  --popover: #ffffff;
+  --popover-foreground: #03060d;
+  --primary: #d4503a;
+  --primary-foreground: #ffffff;
+  --secondary: #fdf6f5;
+  --secondary-foreground: #2d1815;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #d4503a;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #d4503a;
+  --radius: 0.75rem;
+
+  /* Chart colors */
+  --chart-1: #d4503a;
+  --chart-2: #d4af37;
+  --chart-3: #2a9d8f;
+  --chart-4: #e76f51;
+  --chart-5: #264653;
+
+  /* Sidebar colors */
+  --sidebar: #d4503a;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #d4503a;
+  --sidebar-accent: #b83a24;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #e86c56;
+  --sidebar-ring: #ffffff;
+}
+
+/* User provided colors */
+@utility text-red-50 {
+  color: #fef2f2;
+}
+
+@utility text-red-100 {
+  color: #ffe2e2;
+}
+
+@utility text-red-200 {
+  color: #ffcaca;
+}
+
+@utility text-red-300 {
+  color: #ffa3a3;
+}
+
+@utility text-red-400 {
+  color: #ff6568;
+}
+
+@utility text-red-500 {
+  color: #fb2c36;
+}
+
+@utility text-red-600 {
+  color: #e40014;
+}
+
+@utility text-red-700 {
+  color: #bf000f;
+}
+
+@utility text-red-800 {
+  color: #9f0712;
+}
+
+@utility text-red-900 {
+  color: #82181a;
+}
+
+@utility bg-red-50 {
+  background-color: #fef2f2;
+}
+
+@utility bg-red-100 {
+  background-color: #ffe2e2;
+}
+
+@utility bg-red-200 {
+  background-color: #ffcaca;
+}
+
+@utility bg-red-300 {
+  background-color: #ffa3a3;
+}
+
+@utility bg-red-400 {
+  background-color: #ff6568;
+}
+
+@utility bg-red-500 {
+  background-color: #fb2c36;
+}
+
+@utility bg-red-600 {
+  background-color: #e40014;
+}
+
+@utility bg-red-700 {
+  background-color: #bf000f;
+}
+
+@utility bg-red-800 {
+  background-color: #9f0712;
+}
+
+@utility bg-red-900 {
+  background-color: #82181a;
+}
+
+/* ... (Add other utilities similarly if needed, or rely on Tailwind default palette which is close enough for red/orange usually, but user gave specific hexes.
+   Ideally, we map these to the theme too.)
+*/
+
+@theme {
+  --color-red-50: #fef2f2;
+  --color-red-100: #ffe2e2;
+  --color-red-200: #ffcaca;
+  --color-red-300: #ffa3a3;
+  --color-red-400: #ff6568;
+  --color-red-500: #fb2c36;
+  --color-red-600: #e40014;
+  --color-red-700: #bf000f;
+  --color-red-800: #9f0712;
+  --color-red-900: #82181a;
+
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #ffd7a8;
+  --color-orange-400: #ff8b1a;
+  --color-orange-500: #fe6e00;
+  --color-orange-600: #f05100;
+  --color-orange-700: #c53c00;
+  --color-orange-800: #9f2d00;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+* {
+  border-color: var(--border);
+}
