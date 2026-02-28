@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Lead from '@/models/Lead';
+import User from '@/models/User';
+import Notification from '@/models/Notification';
 
 export async function POST(req: Request) {
     try {
@@ -45,8 +47,24 @@ export async function POST(req: Request) {
             value: 0
         });
 
-        // Optional: you could implement logic here to assign the lead round-robin to available 'Members'.
-        // For now, it stays unassigned and visible on the Member dashboard to "claim" or "call".
+        // Generate Notifications for Admins, Leads, and Members
+        try {
+            const usersToNotify = await User.find({ role: { $in: ['Admin', 'Lead', 'Member'] }, status: { $ne: 'Inactive' } });
+
+            if (usersToNotify.length > 0) {
+                const notificationsToInsert = usersToNotify.map(user => ({
+                    userId: user._id,
+                    title: `New Lead: ${firstName} ${lastName || ''}`.trim(),
+                    message: `A new inbound lead arrived from ${finalSourceType}.`,
+                    type: 'Lead',
+                    link: `/admin/leads/${lead._id}`,
+                }));
+
+                await Notification.insertMany(notificationsToInsert);
+            }
+        } catch (notifErr) {
+            console.error('Error generating webhooks/leads notifications:', notifErr);
+        }
 
         return NextResponse.json(
             { success: true, message: 'Lead ingested successfully.', leadId: lead._id },

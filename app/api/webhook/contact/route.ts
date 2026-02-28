@@ -70,12 +70,11 @@ export async function POST(req: Request) {
         // 4. Send Notifications (In-App & Email)
         try {
             // Find admins and sales team members to notify
-            // For now, notify all Admins
-            const admins = await User.find({ role: { $in: ['Admin', 'Administrator'] }, status: { $ne: 'Inactive' } });
+            const usersToNotify = await User.find({ role: { $in: ['Admin', 'Lead', 'Member'] }, status: { $ne: 'Inactive' } });
 
-            if (admins.length > 0) {
-                const notificationsToInsert = admins.map(admin => ({
-                    userId: admin._id,
+            if (usersToNotify.length > 0) {
+                const notificationsToInsert = usersToNotify.map(user => ({
+                    userId: user._id,
                     title: `New Lead: ${firstName} ${lastName}`,
                     message: `A new lead just registered from the website.`,
                     type: 'Lead',
@@ -84,8 +83,12 @@ export async function POST(req: Request) {
 
                 await Notification.insertMany(notificationsToInsert);
 
-                const adminEmails = admins.map(a => a.email);
-                const emailHtml = `
+                const adminUsers = usersToNotify.filter(u => u.role === 'Admin');
+                const adminEmails = adminUsers.map(a => a.email);
+
+                // Only send emails to Admins to prevent spamming sales floor
+                if (adminEmails.length > 0) {
+                    const emailHtml = `
                     <h2>New Lead Received!</h2>
                     <p><strong>Name:</strong> ${firstName} ${lastName}</p>
                     <p><strong>Email:</strong> ${email}</p>
@@ -93,12 +96,13 @@ export async function POST(req: Request) {
                     <a href="${process.env.NEXTAUTH_URL}/admin/leads/${lead._id}">Click here to view lead in CRM</a>
                 `;
 
-                if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-                    await sendEmailNotification(
-                        adminEmails,
-                        `New Lead Alert: ${firstName} ${lastName}`,
-                        emailHtml
-                    );
+                    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+                        await sendEmailNotification(
+                            adminEmails,
+                            `New Lead Alert: ${firstName} ${lastName}`,
+                            emailHtml
+                        );
+                    }
                 }
             }
         } catch (notifErr) {
