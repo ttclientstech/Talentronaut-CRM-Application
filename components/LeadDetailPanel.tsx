@@ -53,6 +53,9 @@ export default function LeadDetailPanel({ leadId, onClose, onDeleted }: Props) {
     const [meetingTitle, setMeetingTitle] = useState('');
     const [meetingDate, setMeetingDate] = useState('');
     const [meetingLink, setMeetingLink] = useState('');
+    const [meetingHostId, setMeetingHostId] = useState('');
+    const [hostAvailability, setHostAvailability] = useState<any[]>([]);
+    const [fetchingAvailability, setFetchingAvailability] = useState(false);
     const [addingMeeting, setAddingMeeting] = useState(false);
 
     const [editMode, setEditMode] = useState(false);
@@ -88,10 +91,28 @@ export default function LeadDetailPanel({ leadId, onClose, onDeleted }: Props) {
         setLead(null);
         setEditMode(false);
         fetchLead();
-        if (isAdmin) {
-            fetch('/api/admin/users').then(r => r.json()).then(d => setUsers(d.users || []));
-        }
+        fetch('/api/admin/users').then(r => r.json()).then(d => setUsers(d.users || []));
     }, [leadId, fetchLead, isAdmin]);
+
+    useEffect(() => {
+        if (!meetingHostId) {
+            setHostAvailability([]);
+            return;
+        }
+        const fetchAvailability = async () => {
+            setFetchingAvailability(true);
+            try {
+                const res = await fetch(`/api/availability?leaderId=${meetingHostId}`);
+                const data = await res.json();
+                setHostAvailability(data.availability || []);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setFetchingAvailability(false);
+            }
+        };
+        fetchAvailability();
+    }, [meetingHostId]);
 
     const handleStatusChange = async (status: string) => {
         setSaving(true);
@@ -137,9 +158,9 @@ export default function LeadDetailPanel({ leadId, onClose, onDeleted }: Props) {
         await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ addMeeting: { title: meetingTitle, date: meetingDate, link: meetingLink } }),
+            body: JSON.stringify({ addMeeting: { title: meetingTitle, date: meetingDate, link: meetingLink, hostId: meetingHostId } }),
         });
-        setMeetingTitle(''); setMeetingDate(''); setMeetingLink('');
+        setMeetingTitle(''); setMeetingDate(''); setMeetingLink(''); setMeetingHostId('');
         setShowMeetingForm(false);
         await fetchLead();
         setAddingMeeting(false);
@@ -387,14 +408,50 @@ export default function LeadDetailPanel({ leadId, onClose, onDeleted }: Props) {
                         </button>
                     </div>
                     {showMeetingForm && (
-                        <form onSubmit={handleAddMeeting} className="mb-4 space-y-2 p-4 bg-gray-50 rounded-xl">
+                        <form onSubmit={handleAddMeeting} className="mb-4 space-y-2 p-4 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
                             <input type="text" placeholder="Meeting title" value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} required
                                 className="w-full rounded-xl border border-gray-100 bg-white px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none" />
+                            <select value={meetingHostId} onChange={e => setMeetingHostId(e.target.value)} required
+                                className="w-full rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs font-bold focus:border-primary focus:outline-none text-gray-500">
+                                <option value="" disabled>Select Leader / Host</option>
+                                {users.filter(u => u.role === 'Lead' || u.role === 'Admin').map(u => (
+                                    <option key={u._id} value={u._id} className="text-gray-900">{u.name} ({u.role})</option>
+                                ))}
+                            </select>
+
+                            {/* Show availability if host is selected */}
+                            {meetingHostId && (
+                                <div className="rounded-xl border border-gray-100 bg-white p-3 text-xs">
+                                    <p className="font-bold text-gray-900 mb-2">Available Slots:</p>
+                                    {fetchingAvailability ? (
+                                        <p className="text-gray-400 font-medium flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Fetching schedule...</p>
+                                    ) : hostAvailability.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            {/* Map numbers 0-6 to generic day names */}
+                                            {hostAvailability.filter(a => a.isAvailable).map((a) => {
+                                                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                                                const dayName = days[a.dayOfWeek];
+                                                return (
+                                                    <span key={a.dayOfWeek} className="bg-primary/5 text-primary border border-primary/20 px-2 py-1 rounded-lg font-bold">
+                                                        {dayName}: {a.startTime} - {a.endTime}
+                                                    </span>
+                                                );
+                                            })}
+                                            {hostAvailability.filter(a => a.isAvailable).length === 0 && (
+                                                <p className="text-gray-400 font-medium italic">This Leader has not set their availability yet.</p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-400 font-medium italic">This Leader has not set their availability yet.</p>
+                                    )}
+                                </div>
+                            )}
+
                             <input type="datetime-local" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} required
                                 className="w-full rounded-xl border border-gray-100 bg-white px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none" />
                             <input type="url" placeholder="Join link (optional)" value={meetingLink} onChange={e => setMeetingLink(e.target.value)}
                                 className="w-full rounded-xl border border-gray-100 bg-white px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none" />
-                            <button type="submit" disabled={addingMeeting} className="w-full py-2 bg-primary text-white text-xs font-black rounded-xl disabled:opacity-50">
+                            <button type="submit" disabled={addingMeeting} className="w-full py-2 bg-primary text-white text-xs font-black rounded-xl disabled:opacity-50 mt-2">
                                 {addingMeeting ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto" /> : 'Schedule'}
                             </button>
                         </form>
@@ -428,8 +485,8 @@ export default function LeadDetailPanel({ leadId, onClose, onDeleted }: Props) {
                                         {['Completed', 'Rescheduled', 'Cancelled'].map(s => (
                                             <button key={s} onClick={() => handleUpdateMeetingStatus(m._id, s)} disabled={m.status === s}
                                                 className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg transition-colors disabled:opacity-30 ${s === 'Completed' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' :
-                                                        s === 'Rescheduled' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' :
-                                                            'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    s === 'Rescheduled' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' :
+                                                        'bg-red-100 text-red-700 hover:bg-red-200'
                                                     }`}>
                                                 {s}
                                             </button>

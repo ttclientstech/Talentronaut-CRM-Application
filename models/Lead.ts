@@ -17,6 +17,8 @@ export interface IMeeting {
     link?: string;
     status: 'Scheduled' | 'Completed' | 'Rescheduled' | 'Cancelled';
     notes?: string;
+    hostId?: mongoose.Types.ObjectId; // Sales Leader (Lead)
+    schedulerId?: mongoose.Types.ObjectId; // Sales Member
     createdAt?: Date;
 }
 
@@ -27,6 +29,7 @@ export interface ILead extends Document {
     phone?: string;
     company?: string;
     sourceUrl?: string;
+    sourceType?: 'Website' | 'Meta' | 'Manual' | 'Other';
     source: mongoose.Types.ObjectId;
     status: 'New' | 'In Progress' | 'Contacted' | 'Needs Analysis' | 'Proposal Sent' | 'Won' | 'Lost' | 'Closed' | 'Qualified';
     details?: Map<string, any>;
@@ -60,6 +63,8 @@ const MeetingSchema = new Schema<IMeeting>({
         default: 'Scheduled',
     },
     notes: { type: String },
+    hostId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    schedulerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 const LeadSchema: Schema<ILead> = new Schema(
@@ -70,7 +75,13 @@ const LeadSchema: Schema<ILead> = new Schema(
         phone: { type: String, trim: true },
         company: { type: String, trim: true },
         sourceUrl: { type: String, trim: true },
-        source: { type: mongoose.Schema.Types.ObjectId, ref: 'Source', required: [true, 'Lead must belong to a Source'] },
+        sourceType: {
+            type: String,
+            enum: ['Website', 'Meta', 'Manual', 'Other'],
+            default: 'Manual',
+        },
+        // Source reference might be optional now if we rely on sourceType for external webhooks
+        source: { type: mongoose.Schema.Types.ObjectId, ref: 'Source', required: false },
         assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         value: { type: Number, default: 0 },
         status: {

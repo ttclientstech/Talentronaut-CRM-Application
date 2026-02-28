@@ -60,8 +60,8 @@ export const authOptions: NextAuthOptions = {
                     throw new Error('Unauthorized: You do not have access to the CRM. Please contact an admin.');
                 }
 
-                // Map Workspace roles to CRM roles for internal consistency
-                const mappedRole = user.role === 'Admin' ? 'Admin' : 'Sales Person';
+                // Roles are already Admin, Lead, Member in Workspace. Keep them identical.
+                const mappedRole = user.role;
 
                 return {
                     id: userId,

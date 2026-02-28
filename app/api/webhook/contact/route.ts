@@ -20,69 +20,7 @@ export async function OPTIONS() {
     return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-// ─── Subject → Domain + Campaign mapping ────────────────────────────────────
-// Keywords are matched case-insensitively. Add / edit entries freely.
-const DOMAIN_MAP: { keywords: string[]; domain: string; campaign: string }[] = [
-    {
-        keywords: ['ai', 'ml', 'machine learning', 'artificial intelligence', 'chatbot', 'automation', 'nlp'],
-        domain: 'AI Solutions',
-        campaign: 'AI Outreach',
-    },
-    {
-        keywords: ['web', 'website', 'app', 'application', 'software', 'development', 'mobile', 'saas', 'platform'],
-        domain: 'Web & App Development',
-        campaign: 'Website Leads',
-    },
-    {
-        keywords: ['talent', 'recruit', 'hr', 'hiring', 'staffing', 'workforce', 'team'],
-        domain: 'Talent Sourcing',
-        campaign: 'Recruitment Leads',
-    },
-    {
-        keywords: ['consult', 'strategy', 'advisory', 'enterprise', 'solution', 'digital transformation'],
-        domain: 'Consulting',
-        campaign: 'Consulting Enquiries',
-    },
-];
 
-const DEFAULT_DOMAIN = 'General Enquiries';
-const DEFAULT_CAMPAIGN = 'Website Enquiries';
-const SOURCE_NAME = 'Company Website';
-
-function mapSubjectToHierarchy(subject: string): { domain: string; campaign: string } {
-    const lower = subject.toLowerCase();
-    for (const entry of DOMAIN_MAP) {
-        if (entry.keywords.some(kw => lower.includes(kw))) {
-            return { domain: entry.domain, campaign: entry.campaign };
-        }
-    }
-    return { domain: DEFAULT_DOMAIN, campaign: DEFAULT_CAMPAIGN };
-}
-
-// ─── Upsert helpers (find or create) ────────────────────────────────────────
-async function findOrCreateDomain(name: string) {
-    return Domain.findOneAndUpdate(
-        { name },
-        { $setOnInsert: { name, status: 'Active' } },
-        { upsert: true, new: true }
-    );
-}
-
-async function findOrCreateCampaign(name: string, domainId: string) {
-    return Campaign.findOneAndUpdate(
-        { name, domain: domainId },
-        { $setOnInsert: { name, domain: domainId, status: 'Active' } },
-        { upsert: true, new: true }
-    );
-}
-
-async function findOrCreateSource(campaignId: string) {
-    return Source.findOneAndUpdate(
-        { name: SOURCE_NAME, campaign: campaignId },
-        { $setOnInsert: { name: SOURCE_NAME, campaign: campaignId, type: 'Website', status: 'Active' } },
-        { upsert: true, new: true }
-    );
-}
 
 // ─── Main POST handler ───────────────────────────────────────────────────────
 export async function POST(req: Request) {
@@ -105,33 +43,29 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
-        // 1. Map subject → domain / campaign names
-        const { domain: domainName, campaign: campaignName } = mapSubjectToHierarchy(subject || '');
-
-        // 2. Upsert the hierarchy
-        const domainDoc = await findOrCreateDomain(domainName);
-        const campaignDoc = await findOrCreateCampaign(campaignName, domainDoc._id.toString());
-        const sourceDoc = await findOrCreateSource(campaignDoc._id.toString());
-
-        // 3. Create the lead
-        const lead = await Lead.create({
+        // 1. Create the lead directly using the new schema
+        const newLeadData: any = {
             firstName,
             lastName,
             email: String(email).toLowerCase().trim(),
             phone: phone || undefined,
-            company: undefined,
-            source: sourceDoc._id,
+            sourceType: 'Website',
+            sourceUrl: 'Talentronaut Website',
             status: 'New',
             value: 0,
-            details: new Map(Object.entries({
-                subject: subject || '',
-                message: message || '',
-                submittedFrom: 'Company Website',
-                submittedAt: new Date().toISOString(),
-            })),
-        });
+        };
 
-        console.log(`✅ Webhook lead created: ${lead._id} | ${domainName} → ${campaignName} → ${SOURCE_NAME}`);
+        if (subject || message) {
+            newLeadData.remarks = [{
+                note: `Contact Form Submission:\nSubject: ${subject || 'No Subject'}\nMessage: ${message || 'No Message'}`,
+                method: 'Other',
+                addedByName: 'Website Form',
+            }];
+        }
+
+        const lead = await Lead.create(newLeadData);
+
+        console.log(`✅ Webhook lead created: ${lead._id}`);
 
         // 4. Send Notifications (In-App & Email)
         try {
@@ -143,7 +77,7 @@ export async function POST(req: Request) {
                 const notificationsToInsert = admins.map(admin => ({
                     userId: admin._id,
                     title: `New Lead: ${firstName} ${lastName}`,
-                    message: `A new lead just registered from the website for ${domainName}.`,
+                    message: `A new lead just registered from the website.`,
                     type: 'Lead',
                     link: `/admin/leads/${lead._id}`,
                 }));
@@ -155,7 +89,6 @@ export async function POST(req: Request) {
                     <h2>New Lead Received!</h2>
                     <p><strong>Name:</strong> ${firstName} ${lastName}</p>
                     <p><strong>Email:</strong> ${email}</p>
-                    <p><strong>Domain:</strong> ${domainName}</p>
                     <br/>
                     <a href="${process.env.NEXTAUTH_URL}/admin/leads/${lead._id}">Click here to view lead in CRM</a>
                 `;
@@ -176,11 +109,6 @@ export async function POST(req: Request) {
             {
                 success: true,
                 leadId: lead._id,
-                hierarchy: {
-                    domain: domainName,
-                    campaign: campaignName,
-                    source: SOURCE_NAME,
-                },
             },
             { status: 201, headers: CORS_HEADERS }
         );

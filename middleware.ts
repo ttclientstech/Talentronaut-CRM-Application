@@ -11,18 +11,12 @@ export default withAuth(
             return NextResponse.rewrite(new URL("/login", req.url));
         }
 
+        const allowedSalesRoles = ["Sales Person", "Lead", "Member", "Admin"];
         if (
             req.nextUrl.pathname.startsWith("/sales") &&
-            req.nextauth.token?.role !== "Sales Person" &&
-            req.nextauth.token?.role !== "Admin" // Admin might want to see sales view? or strictly separate. PRD says Admin has full visibility.
+            !allowedSalesRoles.includes(req.nextauth.token?.role as string)
         ) {
-            // If Admin tries to go to /sales, maybe allow? PRD: "Admin ... View Analytics... Re-assign leads".
-            // But typically Admin has their own dashboard.
-            // Let's allow Admin for now or just restrict to strictly assigned roles if "Admin Dashboard" is inclusive.
-            // For now, strict check for Sales Person on /sales to avoid confusion, unless Admin *visits* a sales page.
-            if (req.nextauth.token?.role !== "Admin") {
-                return NextResponse.rewrite(new URL("/login", req.url));
-            }
+            return NextResponse.rewrite(new URL("/login", req.url));
         }
     },
     {

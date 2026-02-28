@@ -21,6 +21,7 @@ const overviewItems = [
 const workItems = [
     { name: 'My Tasks', href: '/sales/tasks', icon: CheckSquare },
     { name: 'My Leads', href: '/sales/leads', icon: FolderKanban },
+    { name: 'My Availability', href: '/sales/availability', icon: CalendarDays },
 ];
 
 // Personal items removed
@@ -90,9 +91,12 @@ export default function SalesSidebar() {
                         Work
                     </p>
                     <div className="space-y-1">
-                        {workItems.map((item) => (
-                            <NavItem key={item.href} item={item} />
-                        ))}
+                        {workItems.map((item) => {
+                            if (item.name === 'My Availability' && user?.role !== 'Lead' && user?.role !== 'Admin') {
+                                return null;
+                            }
+                            return <NavItem key={item.href} item={item} />;
+                        })}
                     </div>
                 </div>
 
@@ -112,7 +116,7 @@ export default function SalesSidebar() {
                                 {user?.name || 'Sales Member'}
                             </p>
                             <p className="text-[10px] font-semibold text-white/50 uppercase tracking-wide">
-                                Lead
+                                {user?.role || 'Lead'}
                             </p>
                         </div>
                     </div>

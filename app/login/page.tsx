@@ -16,7 +16,7 @@ export default function LoginPage() {
         if (status === 'authenticated') {
             if (session?.user?.role === 'Admin') {
                 router.push('/admin');
-            } else if (session?.user?.role === 'Sales Person') {
+            } else if (['Sales Person', 'Lead', 'Member'].includes(session?.user?.role as string)) {
                 router.push('/sales');
             }
         }
@@ -41,7 +41,7 @@ export default function LoginPage() {
                 const session = await getSession();
                 if (session?.user?.role === 'Admin') {
                     window.location.href = '/admin';
-                } else if (session?.user?.role === 'Sales Person') {
+                } else if (['Sales Person', 'Lead', 'Member'].includes(session?.user?.role as string)) {
                     window.location.href = '/sales';
                 } else {
                     // Fallback: refresh and let useEffect handle it
