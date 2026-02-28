@@ -3,7 +3,9 @@ import dbConnect from '@/lib/db';
 import Lead from '@/models/Lead';
 import Source from '@/models/Source';
 import Campaign from '@/models/Campaign';
+import Subdomain from '@/models/Subdomain';
 import Domain from '@/models/Domain';
+import Project from '@/models/Project';
 import User from '@/models/User';
 import Notification from '@/models/Notification';
 import { sendEmailNotification } from '@/lib/emailService';
@@ -20,9 +22,80 @@ export async function OPTIONS() {
     return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
+// ─── Taxonomy Mapping ────────────────────────────────────────────────────────
+const TAXONOMY_MAP: { keywords: string[]; project: string; domain: string; subdomain: string; campaign: string }[] = [
+    {
+        keywords: ['ai', 'ml', 'machine learning', 'artificial intelligence', 'chatbot', 'automation', 'nlp', 'talentronaut', 'crm'],
+        project: 'Talentronaut',
+        domain: 'AI & SaaS Solutions',
+        subdomain: 'SaaS Products',
+        campaign: 'Inbound Enquiries',
+    },
+    {
+        keywords: ['web', 'website', 'app', 'application', 'software', 'development', 'mobile', 'linksus'],
+        project: 'LinksUs',
+        domain: 'Development Services',
+        subdomain: 'Web & App Development',
+        campaign: 'Website Leads',
+    }
+];
 
+const DEFAULT_PROJECT = 'Talentronaut';
+const DEFAULT_DOMAIN = 'General Enquiries';
+const DEFAULT_SUBDOMAIN = 'General';
+const DEFAULT_CAMPAIGN = 'Website Enquiries';
+const SOURCE_NAME = 'Company Website';
 
-// ─── Main POST handler ───────────────────────────────────────────────────────
+function mapSubjectToHierarchy(text: string): { project: string; domain: string; subdomain: string; campaign: string } {
+    const lower = text.toLowerCase();
+    for (const entry of TAXONOMY_MAP) {
+        if (entry.keywords.some(kw => lower.includes(kw))) {
+            return { project: entry.project, domain: entry.domain, subdomain: entry.subdomain, campaign: entry.campaign };
+        }
+    }
+    return { project: DEFAULT_PROJECT, domain: DEFAULT_DOMAIN, subdomain: DEFAULT_SUBDOMAIN, campaign: DEFAULT_CAMPAIGN };
+}
+
+// ─── Find or Create Helpers ─────────────────────────────────────────────────
+async function findOrCreateProject(name: string) {
+    return Project.findOneAndUpdate(
+        { name },
+        { $setOnInsert: { name, status: 'Active' } },
+        { upsert: true, new: true }
+    );
+}
+
+async function findOrCreateDomain(name: string, projectId: string) {
+    return Domain.findOneAndUpdate(
+        { name, project: projectId },
+        { $setOnInsert: { name, project: projectId, status: 'Active' } },
+        { upsert: true, new: true }
+    );
+}
+
+async function findOrCreateSubdomain(name: string, domainId: string) {
+    return Subdomain.findOneAndUpdate(
+        { name, domain: domainId },
+        { $setOnInsert: { name, domain: domainId, status: 'Active' } },
+        { upsert: true, new: true }
+    );
+}
+
+async function findOrCreateCampaign(name: string, subdomainId: string) {
+    return Campaign.findOneAndUpdate(
+        { name, subdomain: subdomainId },
+        { $setOnInsert: { name, subdomain: subdomainId, status: 'Active' } },
+        { upsert: true, new: true }
+    );
+}
+
+async function findOrCreateSource(campaignId: string) {
+    return Source.findOneAndUpdate(
+        { name: SOURCE_NAME, campaign: campaignId },
+        { $setOnInsert: { name: SOURCE_NAME, campaign: campaignId, type: 'Website', status: 'Active' } },
+        { upsert: true, new: true }
+    );
+}// ─── Main POST handler ───────────────────────────────────────────────────────
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -43,7 +116,18 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
-        // 1. Create the lead directly using the new schema
+        // 1. Map content to hierarchy names
+        const combinedText = `${subject || ''} ${message || ''}`;
+        const taxonomy = mapSubjectToHierarchy(combinedText);
+
+        // 2. Build the hierarchy top-down
+        const projectDoc = await findOrCreateProject(taxonomy.project);
+        const domainDoc = await findOrCreateDomain(taxonomy.domain, projectDoc._id.toString());
+        const subdomainDoc = await findOrCreateSubdomain(taxonomy.subdomain, domainDoc._id.toString());
+        const campaignDoc = await findOrCreateCampaign(taxonomy.campaign, subdomainDoc._id.toString());
+        const sourceDoc = await findOrCreateSource(campaignDoc._id.toString());
+
+        // 3. Create the lead directly using the new schema and link source
         const newLeadData: any = {
             firstName,
             lastName,
@@ -51,6 +135,7 @@ export async function POST(req: Request) {
             phone: phone || undefined,
             sourceType: 'Website',
             sourceUrl: 'Talentronaut Website',
+            source: sourceDoc._id,
             status: 'New',
             value: 0,
         };
@@ -65,7 +150,7 @@ export async function POST(req: Request) {
 
         const lead = await Lead.create(newLeadData);
 
-        console.log(`✅ Webhook lead created: ${lead._id}`);
+        console.log(`✅ Webhook lead created: ${lead._id} appended to ${taxonomy.campaign}`);
 
         // 4. Send Notifications (In-App & Email)
         try {

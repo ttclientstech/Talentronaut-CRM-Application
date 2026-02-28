@@ -12,7 +12,9 @@ export async function GET() {
         }
 
         await connectMongo();
-        const projects = await Project.find().sort({ createdAt: -1 });
+        const projects = await Project.find({
+            name: { $in: ['Talentronaut', 'LinksUs', 'LinksUS'] }
+        }).sort({ createdAt: -1 });
 
         return NextResponse.json({ projects }, { status: 200 });
     } catch (error: any) {
