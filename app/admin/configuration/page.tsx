@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { ChevronRight, Plus, Loader2, Mail, Phone } from 'lucide-react';
 import FolderCard from '@/components/Common/FolderCard';
 
-type Level = 'domains' | 'campaigns' | 'sources' | 'leads';
+type Level = 'projects' | 'domains' | 'subdomains' | 'campaigns' | 'sources' | 'leads';
 
 interface Breadcrumb {
     name: string;
@@ -13,13 +13,15 @@ interface Breadcrumb {
     id: string | null;
 }
 
-export default function ConfigurationPage() {
+function ConfigurationContent() {
     const router = useRouter();
-    const [level, setLevel] = useState<Level>('domains');
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [level, setLevel] = useState<Level>('projects');
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([
-        { name: 'Domains', level: 'domains', id: null }
+        { name: 'Projects', level: 'projects', id: null }
     ]);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newItemName, setNewItemName] = useState('');
@@ -29,19 +31,21 @@ export default function ConfigurationPage() {
         setLoading(true);
         try {
             const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
-            let url = '/api/domains';
+            let url = '/api/projects';
 
-            if (level === 'domains') url = '/api/domains';
-            else if (level === 'campaigns') url = `/api/campaigns?domainId=${lastBreadcrumb.id}`;
-            else if (level === 'sources') url = `/api/sources?campaignId=${lastBreadcrumb.id}`;
-            else if (level === 'leads') url = `/api/leads?sourceId=${lastBreadcrumb.id}`;
+            if (level === 'projects') url = '/api/projects';
+            else if (level === 'domains') url = `/api/domains?projectId=${lastBreadcrumb.id}`;
+            else if (level === 'subdomains') url = `/api/subdomains?domainId=${lastBreadcrumb.id}`;
+            else if (level === 'campaigns') url = `/api/campaigns?subdomainId=${lastBreadcrumb.id}`;
+            else if (level === 'leads') url = `/api/leads?campaignId=${lastBreadcrumb.id}`;
 
             const res = await fetch(url);
             const data = await res.json();
 
-            if (level === 'domains') setItems(data.domains || []);
+            if (level === 'projects') setItems(data.projects || []);
+            else if (level === 'domains') setItems(data.domains || []);
+            else if (level === 'subdomains') setItems(data.subdomains || []);
             else if (level === 'campaigns') setItems(data.campaigns || []);
-            else if (level === 'sources') setItems(data.sources || []);
             else if (level === 'leads') setItems(data.leads || []);
 
         } catch (error) {
@@ -68,11 +72,10 @@ export default function ConfigurationPage() {
 
     // Navigate to lead detail page within admin layout, passing breadcrumb context
     const navigateToLead = (leadId: string) => {
-        // breadcrumbs: [Domains, domainName, campaignName, sourceName]
-        const domain = breadcrumbs[1]?.name || '';
-        const campaign = breadcrumbs[2]?.name || '';
-        const source = breadcrumbs[3]?.name || '';
-        const params = new URLSearchParams({ domain, campaign, source });
+        // breadcrumbs: [Projects, domainName, subdomainName, campaignName, leadName]
+        const domain = breadcrumbs[2]?.name || '';
+        const campaign = breadcrumbs[4]?.name || '';
+        const params = new URLSearchParams({ domain, campaign });
         router.push(`/admin/leads/${leadId}?${params.toString()}`);
     };
 
@@ -83,11 +86,13 @@ export default function ConfigurationPage() {
         setCreating(true);
         try {
             const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
-            let url = '/api/domains';
+            let url = '/api/projects';
             let body: any = { name: newItemName };
 
-            if (level === 'campaigns') { url = '/api/campaigns'; body.domainId = lastBreadcrumb.id; }
-            else if (level === 'sources') { url = '/api/sources'; body.campaignId = lastBreadcrumb.id; }
+            if (level === 'domains') { url = '/api/domains'; body.projectId = lastBreadcrumb.id; }
+            else if (level === 'subdomains') { url = '/api/subdomains'; body.domainId = lastBreadcrumb.id; }
+            else if (level === 'campaigns') { url = '/api/campaigns'; body.subdomainId = lastBreadcrumb.id; }
+            else if (level === 'leads') { url = '/api/leads'; body.campaignId = lastBreadcrumb.id; }
 
             const res = await fetch(url, {
                 method: 'POST',
@@ -106,6 +111,55 @@ export default function ConfigurationPage() {
             setCreating(false);
         }
     };
+
+    // Listen to query parameters from the new Sidebar Explorer
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            if (action === 'new-project') {
+                setLevel('projects');
+                setBreadcrumbs([{ name: 'Projects', level: 'projects', id: null }]);
+                setShowCreateModal(true);
+                // Clean up the URL
+                window.history.replaceState(null, '', '/admin/configuration');
+                return;
+            }
+
+            const type = params.get('type');
+            const id = params.get('id');
+            const name = params.get('name');
+
+            if (type && id && name) {
+                // If the user clicks a folder in the sidebar, we want to view its *children*.
+                if (type === 'project') {
+                    setBreadcrumbs([
+                        { name: 'Projects', level: 'projects', id: null },
+                        { name, level: 'domains', id }
+                    ]);
+                    setLevel('domains');
+                } else if (type === 'domain') {
+                    setBreadcrumbs([
+                        { name: 'Projects', level: 'projects', id: null },
+                        { name, level: 'subdomains', id }
+                    ]);
+                    setLevel('subdomains');
+                } else if (type === 'subdomain') {
+                    setBreadcrumbs([
+                        { name: 'Projects', level: 'projects', id: null },
+                        { name, level: 'campaigns', id }
+                    ]);
+                    setLevel('campaigns');
+                } else if (type === 'campaign') {
+                    setBreadcrumbs([
+                        { name: 'Projects', level: 'projects', id: null },
+                        { name, level: 'leads', id }
+                    ]);
+                    setLevel('leads');
+                }
+            }
+        }
+    }, [pathname, searchParams]);
 
     const statusConfig: Record<string, { bg: string; text: string }> = {
         'New': { bg: 'bg-blue-50', text: 'text-blue-700' },
@@ -138,7 +192,9 @@ export default function ConfigurationPage() {
                     <div>
                         <h1 className="text-4xl font-black text-gray-900 capitalize tracking-tight">{level}</h1>
                         <p className="mt-2 text-gray-500 font-medium">
-                            {level === 'domains' && 'Organize your sales verticals and services.'}
+                            {level === 'projects' && 'Organize your sales verticals and services.'}
+                            {level === 'domains' && `Domains under ${breadcrumbs[breadcrumbs.length - 1].name}.`}
+                            {level === 'subdomains' && `Subdomains under ${breadcrumbs[breadcrumbs.length - 1].name}.`}
                             {level === 'campaigns' && `Campaigns running under ${breadcrumbs[breadcrumbs.length - 1].name}.`}
                             {level === 'sources' && `Lead origins for ${breadcrumbs[breadcrumbs.length - 1].name}.`}
                             {level === 'leads' && `Actual leads received from ${breadcrumbs[breadcrumbs.length - 1].name}.`}
@@ -290,9 +346,10 @@ export default function ConfigurationPage() {
                                 name={item.name}
                                 description={item.status === 'Active' ? 'Active Project' : 'Paused'}
                                 onClick={() => {
-                                    if (level === 'domains') navigateTo('campaigns', item._id, item.name);
-                                    else if (level === 'campaigns') navigateTo('sources', item._id, item.name);
-                                    else if (level === 'sources') navigateTo('leads', item._id, item.name);
+                                    if (level === 'projects') navigateTo('domains', item._id, item.name);
+                                    else if (level === 'domains') navigateTo('subdomains', item._id, item.name);
+                                    else if (level === 'subdomains') navigateTo('campaigns', item._id, item.name);
+                                    else if (level === 'campaigns') navigateTo('leads', item._id, item.name);
                                 }}
                             />
                         ))
@@ -333,5 +390,17 @@ export default function ConfigurationPage() {
                 )
             }
         </div >
+    );
+}
+
+export default function ConfigurationPage() {
+    return (
+        <React.Suspense fallback={
+            <div className="flex h-96 items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary/30" />
+            </div>
+        }>
+            <ConfigurationContent />
+        </React.Suspense>
     );
 }

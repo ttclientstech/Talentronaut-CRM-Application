@@ -1,24 +1,24 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export interface ICampaign extends Document {
+export interface ISubdomain extends Document {
     name: string;
-    subdomain: mongoose.Types.ObjectId;
+    domain: mongoose.Types.ObjectId;
     status: 'Active' | 'Inactive';
     createdAt: Date;
     updatedAt: Date;
 }
 
-const CampaignSchema: Schema<ICampaign> = new Schema(
+const SubdomainSchema: Schema<ISubdomain> = new Schema(
     {
         name: {
             type: String,
-            required: [true, 'Please provide a campaign name'],
+            required: [true, 'Please provide a subdomain name'],
             trim: true,
         },
-        subdomain: {
+        domain: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Subdomain',
-            required: [true, 'Campaign must belong to a Subdomain'],
+            ref: 'Domain',
+            required: [true, 'Subdomain must belong to a Domain'],
         },
         status: {
             type: String,
@@ -31,7 +31,7 @@ const CampaignSchema: Schema<ICampaign> = new Schema(
     }
 );
 
-const Campaign: Model<ICampaign> =
-    mongoose.models.Campaign || mongoose.model<ICampaign>('Campaign', CampaignSchema);
+const Subdomain: Model<ISubdomain> =
+    mongoose.models.Subdomain || mongoose.model<ISubdomain>('Subdomain', SubdomainSchema);
 
-export default Campaign;
+export default Subdomain;

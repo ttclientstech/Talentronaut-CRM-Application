@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/db';
 import Notification from '@/models/Notification';
+import mongoose from 'mongoose';
 
 // GET: Fetch unread (or all) notifications for the logged-in user
 export async function GET(req: Request) {
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
 
         await dbConnect();
 
-        const query: any = { userId: (session.user as any).id };
+        const query: any = { userId: new mongoose.Types.ObjectId((session.user as any).id) };
         if (unreadOnly) {
             query.read = false;
         }
@@ -47,7 +48,7 @@ export async function PATCH(req: Request) {
         if (notificationId) {
             // Mark specific notification as read
             const updated = await Notification.findOneAndUpdate(
-                { _id: notificationId, userId: (session.user as any).id },
+                { _id: notificationId, userId: new mongoose.Types.ObjectId((session.user as any).id) },
                 { read: true },
                 { new: true }
             );
@@ -55,7 +56,7 @@ export async function PATCH(req: Request) {
         } else {
             // Mark all as read
             await Notification.updateMany(
-                { userId: (session.user as any).id, read: false },
+                { userId: new mongoose.Types.ObjectId((session.user as any).id), read: false },
                 { read: true }
             );
             return NextResponse.json({ success: true, message: 'All notifications marked as read' });

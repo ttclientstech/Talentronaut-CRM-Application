@@ -16,7 +16,7 @@ const overviewItems = [
 ];
 
 const workItems = [
-    { name: 'Configuration', href: '/admin/configuration', icon: FolderTree },
+    { name: 'Projects', href: '/admin/configuration', icon: FolderTree },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
@@ -34,11 +34,10 @@ export default function AdminSidebar() {
         return (
             <Link
                 href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
-                    isActive
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${isActive
                         ? 'bg-white text-[#d4503a] shadow-sm'
                         : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
+                    }`}
             >
                 <item.icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#d4503a]' : 'text-white/70'}`} />
                 {item.name}

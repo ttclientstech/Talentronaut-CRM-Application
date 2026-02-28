@@ -21,14 +21,9 @@ const overviewItems = [
 const workItems = [
     { name: 'My Tasks', href: '/sales/tasks', icon: CheckSquare },
     { name: 'My Leads', href: '/sales/leads', icon: FolderKanban },
-    { name: 'Members', href: '/sales/members', icon: Users },
-    { name: 'Passwords', href: '/sales/passwords', icon: KeyRound },
 ];
 
-const personalItems = [
-    { name: 'My Schedule', href: '/sales/schedule', icon: CalendarDays },
-    { name: 'My Skills', href: '/sales/skills', icon: Star },
-];
+// Personal items removed
 
 export default function SalesSidebar() {
     const pathname = usePathname();
@@ -47,8 +42,8 @@ export default function SalesSidebar() {
             <Link
                 href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${isActive
-                        ? 'bg-white text-[#d4503a] shadow-sm'
-                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    ? 'bg-white text-[#d4503a] shadow-sm'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
                     }`}
             >
                 <item.icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#d4503a]' : 'text-white/70'}`} />
@@ -101,17 +96,7 @@ export default function SalesSidebar() {
                     </div>
                 </div>
 
-                {/* Personal */}
-                <div>
-                    <p className="mb-2 px-4 text-[9px] font-black uppercase tracking-[0.22em] text-white/40">
-                        Personal
-                    </p>
-                    <div className="space-y-1">
-                        {personalItems.map((item) => (
-                            <NavItem key={item.href} item={item} />
-                        ))}
-                    </div>
-                </div>
+                {/* Personal section removed */}
             </nav>
 
             {/* User Profile Footer */}

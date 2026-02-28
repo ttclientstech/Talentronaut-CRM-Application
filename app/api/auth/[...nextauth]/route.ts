@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import dbConnect from "@/lib/db";
 import User from "@/models/User";
-import Team from "@/models/Team";
+import ToolAccess from "@/models/ToolAccess";
 
 import { NextAuthOptions } from "next-auth";
 
@@ -40,25 +40,24 @@ export const authOptions: NextAuthOptions = {
                 if (user.role === 'Admin') {
                     authorized = true;
                 } else {
-                    // Check if user belongs to the "Sales team"
-                    const salesTeam = await Team.findOne({ name: /Sales team/i });
-                    if (salesTeam) {
-                        const isLeader = salesTeam.leader === userId;
-                        const isMember = salesTeam.members && salesTeam.members.includes(userId);
+                    // Check if user has access to the "crm" tool
+                    const crmAccess = await ToolAccess.findOne({ toolId: 'crm' });
+                    if (crmAccess) {
+                        const hasAccess = crmAccess.accessList && crmAccess.accessList.some((id: any) => id.toString() === userId);
 
-                        if (isLeader || isMember) {
+                        if (hasAccess) {
                             authorized = true;
-                            console.log(`User ${user.email} authorized as Sales Team ${isLeader ? 'Leader' : 'Member'}`);
+                            console.log(`User ${user.email} authorized for CRM access`);
                         } else {
-                            console.log(`User ${user.email} not in Sales Team members or leader`);
+                            console.log(`User ${user.email} not in CRM access list`);
                         }
                     } else {
-                        console.log('Warning: "Sales team" not found in database');
+                        console.log('Warning: "crm" ToolAccess record not found in database');
                     }
                 }
 
                 if (!authorized) {
-                    throw new Error('Unauthorized: Only Sales Team and Admins can access the CRM');
+                    throw new Error('Unauthorized: You do not have access to the CRM. Please contact an admin.');
                 }
 
                 // Map Workspace roles to CRM roles for internal consistency

@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import Lead from '@/models/Lead';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import Notification from '@/models/Notification';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -77,6 +78,9 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         }
 
         // General field update (status, assignedTo, value, etc.)
+        const oldLead = await Lead.findById(id);
+        const isNewAssignment = body.assignedTo && oldLead && String(oldLead.assignedTo) !== String(body.assignedTo);
+
         const lead = await Lead.findByIdAndUpdate(
             id,
             { $set: body },
@@ -84,6 +88,17 @@ export async function PATCH(req: Request, { params }: RouteParams) {
         ).populate('assignedTo', 'name email').populate('source', 'name');
 
         if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+
+        if (isNewAssignment) {
+            await Notification.create({
+                userId: body.assignedTo,
+                title: `New Lead Assigned: ${lead.firstName} ${lead.lastName}`,
+                message: `You have been assigned a new lead.`,
+                type: 'Lead',
+                link: '/sales/leads'
+            });
+        }
+
         return NextResponse.json({ lead });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 400 });
