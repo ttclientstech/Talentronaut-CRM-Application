@@ -129,7 +129,8 @@ export default function SalesDashboardPage() {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-gray-900">{m.title}</p>
-                                        <p className="text-xs text-gray-400 font-medium">with {m.leadName}</p>
+                                        {m.notes && <p className="text-xs text-gray-500 font-medium line-clamp-1 mt-0.5">{m.notes}</p>}
+                                        <p className="text-xs text-gray-400 font-medium mt-0.5">with {m.leadName}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">

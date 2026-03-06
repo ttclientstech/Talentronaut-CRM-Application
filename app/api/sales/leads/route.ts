@@ -17,8 +17,22 @@ export async function GET() {
         await dbConnect();
 
         const userId = (session.user as any).id;
+        const role = (session.user as any).role;
 
-        const leads = await Lead.find({ assignedTo: userId })
+        let query: any = { assignedTo: userId };
+
+        if (role === 'Lead') {
+            query = {
+                $or: [
+                    { assignedTo: userId },
+                    { 'meetings.hostId': userId }
+                ]
+            };
+        } else if (role === 'Admin') {
+            query = {}; // Typically Admins see all leads
+        }
+
+        const leads = await Lead.find(query)
             .populate('source', 'name')
             .populate('assignedTo', 'name email')
             .sort({ updatedAt: -1 });
