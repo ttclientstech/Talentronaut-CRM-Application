@@ -19,8 +19,9 @@ const overviewItems = [
 ];
 
 const workItems = [
+    { name: 'Projects', href: '/sales/projects', icon: FolderKanban },
     { name: 'My Tasks', href: '/sales/tasks', icon: CheckSquare },
-    { name: 'My Leads', href: '/sales/leads', icon: FolderKanban },
+    { name: 'My Leads', href: '/sales/leads', icon: Users },
     { name: 'My Availability', href: '/sales/availability', icon: CalendarDays },
 ];
 
