@@ -1,80 +1,78 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
-import Lead from '@/models/Lead';
-import User from '@/models/User';
-import Notification from '@/models/Notification';
+import { ingestExternalLead, type LeadIngestionPayload } from '@/lib/leadIngestion';
+
+const DEFAULT_ALLOWED_ORIGINS = [
+    'https://campaign.talentronaut.in',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+];
+
+function getAllowedOrigins() {
+    const configuredOrigins = process.env.CRM_ALLOWED_ORIGINS
+        ?.split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+    return configuredOrigins?.length ? configuredOrigins : DEFAULT_ALLOWED_ORIGINS;
+}
+
+function getCorsHeaders(req: Request) {
+    const origin = req.headers.get('origin') || '';
+    const allowedOrigins = getAllowedOrigins();
+    const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+    return {
+        'Access-Control-Allow-Origin': allowedOrigin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-CRM-Webhook-Secret',
+        'Vary': 'Origin',
+    };
+}
+
+function isAuthorized(req: Request) {
+    const secret = process.env.CRM_WEBHOOK_SECRET;
+    if (!secret) return true;
+
+    return req.headers.get('x-crm-webhook-secret') === secret;
+}
+
+export async function OPTIONS(req: Request) {
+    return new NextResponse(null, { status: 204, headers: getCorsHeaders(req) });
+}
 
 export async function POST(req: Request) {
+    const headers = getCorsHeaders(req);
+
+    if (!isAuthorized(req)) {
+        return NextResponse.json(
+            { success: false, error: 'Unauthorized webhook request.' },
+            { status: 401, headers }
+        );
+    }
+
     try {
-        await dbConnect();
-        const data = await req.json();
-
-        // Basic validation for required fields from external sources
-        const { firstName, lastName, email, phone, company, sourceType = 'Website', sourceUrl } = data;
-
-        if (!firstName || !email) {
-            return NextResponse.json(
-                { success: false, error: 'firstName and email are required fields.' },
-                { status: 400 }
-            );
-        }
-
-        // Validate sourceType enum
-        const validSourceTypes = ['Website', 'Meta', 'Manual', 'Other'];
-        const finalSourceType = validSourceTypes.includes(sourceType) ? sourceType : 'Other';
-
-        // Check if lead already exists by email (prevent duplicates)
-        let lead = await Lead.findOne({ email });
-
-        if (lead) {
-            // If lead exists, we might just want to update it or log an event, but for now we skip creating a duplicate
-            return NextResponse.json(
-                { success: true, message: 'Lead already exists.', leadId: lead._id },
-                { status: 200 }
-            );
-        }
-
-        // Create new lead
-        lead = await Lead.create({
-            firstName,
-            lastName: lastName || '', // Provide fallback empty string if last name isn't provided
-            email,
-            phone,
-            company,
-            sourceType: finalSourceType,
-            sourceUrl,
-            status: 'New', // Automatically marked as New Lead
-            value: 0
-        });
-
-        // Generate Notifications for Admins, Leads, and Members
-        try {
-            const usersToNotify = await User.find({ role: { $in: ['Admin', 'Lead', 'Member'] }, status: { $ne: 'Inactive' } });
-
-            if (usersToNotify.length > 0) {
-                const notificationsToInsert = usersToNotify.map(user => ({
-                    userId: user._id,
-                    title: `New Lead: ${firstName} ${lastName || ''}`.trim(),
-                    message: `A new inbound lead arrived from ${finalSourceType}.`,
-                    type: 'Lead',
-                    link: `/admin/leads/${lead._id}`,
-                }));
-
-                await Notification.insertMany(notificationsToInsert);
-            }
-        } catch (notifErr) {
-            console.error('Error generating webhooks/leads notifications:', notifErr);
-        }
+        const payload = await req.json() as LeadIngestionPayload;
+        const result = await ingestExternalLead(payload);
 
         return NextResponse.json(
-            { success: true, message: 'Lead ingested successfully.', leadId: lead._id },
-            { status: 201 }
+            {
+                success: true,
+                message: result.created ? 'Lead ingested successfully.' : 'Existing lead updated successfully.',
+                leadId: result.lead._id,
+                created: result.created,
+                taxonomy: result.taxonomy,
+            },
+            { status: result.created ? 201 : 200, headers }
         );
     } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error while processing lead.';
+        const status = message.includes('required') ? 400 : 500;
         console.error('Webhook Lead Ingestion Error:', error);
+
         return NextResponse.json(
-            { success: false, error: 'Internal server error while processing lead.' },
-            { status: 500 }
+            { success: false, error: message },
+            { status, headers }
         );
     }
 }

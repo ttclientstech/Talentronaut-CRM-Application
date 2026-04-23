@@ -5,7 +5,7 @@ export interface IRemark {
     note: string;
     lastContactedDate?: Date;
     method: 'Call' | 'Email' | 'WhatsApp' | 'In-Person' | 'Other';
-    addedBy: mongoose.Types.ObjectId;
+    addedBy?: mongoose.Types.ObjectId;
     addedByName?: string;
     createdAt?: Date;
 }
@@ -32,7 +32,7 @@ export interface ILead extends Document {
     sourceType?: 'Website' | 'Meta' | 'Manual' | 'Other';
     source: mongoose.Types.ObjectId;
     status: 'New' | 'In Progress' | 'Contacted' | 'Needs Analysis' | 'Proposal Sent' | 'Won' | 'Lost' | 'Closed' | 'Qualified';
-    details?: Map<string, any>;
+    details?: Map<string, unknown>;
     assignedTo?: mongoose.Types.ObjectId;
     value?: number;
     remarks: IRemark[];
