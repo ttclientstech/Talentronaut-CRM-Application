@@ -53,6 +53,7 @@ export async function POST(req: Request) {
 
     try {
         const payload = await req.json() as LeadIngestionPayload;
+        payload.requestOrigin = req.headers.get('x-crm-origin') || req.headers.get('origin') || payload.sourceUrl;
         const result = await ingestExternalLead(payload);
 
         return NextResponse.json(

@@ -77,6 +77,7 @@ export async function POST(req: Request) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-CRM-Origin': 'https://campaign.talentronaut.in',
       'X-CRM-Webhook-Secret': process.env.CRM_WEBHOOK_SECRET || '',
     },
     body: JSON.stringify({
@@ -130,6 +131,7 @@ await fetch('https://<crm-domain>/api/webhooks/leads', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
+    requestOrigin: 'https://campaign.talentronaut.in',
     appName: 'Budget App',
     formId: 'budget-campaign',
     formName: 'Budget Campaign Report Modal',
@@ -157,6 +159,7 @@ Example:
 
 ```json
 {
+  "requestOrigin": "https://talentronaut.in",
   "appName": "Talentronaut Website",
   "formId": "ai-consulting-contact",
   "formName": "AI Consulting Contact Form",

@@ -71,6 +71,7 @@ const ROUTING_RULES: Array<{
 
 export interface LeadIngestionPayload {
     appName?: string;
+    requestOrigin?: string;
     formId?: string;
     formName?: string;
     fullName?: string;
@@ -118,13 +119,13 @@ function toTitleCase(value: string) {
 }
 
 function buildFallbackTaxonomy(payload: LeadIngestionPayload) {
-    const hostname = getHostname(cleanString(payload.sourceUrl));
+    const hostname = getHostname(cleanString(payload.requestOrigin) || cleanString(payload.sourceUrl));
     const appName = cleanString(payload.appName) || cleanString(payload.formName) || toTitleCase(hostname);
     const formName = cleanString(payload.formName);
     const sourceLabel = hostname || DEFAULT_TAXONOMY.sourceName;
 
     return {
-        projectName: appName.toLowerCase().includes('talentronaut') ? 'Talentronaut' : DEFAULT_TAXONOMY.projectName,
+        projectName: hostname.includes('talentronaut') ? 'Talentronaut' : DEFAULT_TAXONOMY.projectName,
         domainName: appName || DEFAULT_TAXONOMY.domainName,
         subdomainName: formName || DEFAULT_TAXONOMY.subdomainName,
         campaignName: formName || DEFAULT_TAXONOMY.campaignName,
@@ -151,8 +152,11 @@ function splitName(payload: LeadIngestionPayload) {
 function getTaxonomy(payload: LeadIngestionPayload) {
     const formId = cleanString(payload.formId).toLowerCase();
     const sourceUrl = cleanString(payload.sourceUrl).toLowerCase();
-    const productName = (cleanString(payload.appName) || cleanString(payload.formName)).toLowerCase();
-    const hostname = getHostname(sourceUrl);
+    const requestOrigin = cleanString(payload.requestOrigin);
+    const originHostname = getHostname(requestOrigin);
+    const sourceHostname = getHostname(sourceUrl);
+    const hostname = originHostname || sourceHostname;
+    const productName = (cleanString(payload.appName) || cleanString(payload.formName) || hostname).toLowerCase();
     const matchedRule = ROUTING_RULES.find((rule) => rule.matches({ formId, sourceUrl, hostname, productName }));
     const base = matchedRule?.taxonomy || buildFallbackTaxonomy(payload);
 
