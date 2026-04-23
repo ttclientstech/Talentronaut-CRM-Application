@@ -16,8 +16,8 @@ For the Budget Campaign form at `https://campaign.talentronaut.in/`, submissions
 
 ```txt
 Talentronaut
-  Budget Calculator
-    Project Budget Report
+  Budget App
+    Budget Campaign Forms
       Budget Campaign
         campaign.talentronaut.in
 ```
@@ -37,6 +37,7 @@ CRM_WEBHOOK_SECRET=use-a-long-random-secret
 
 ```json
 {
+  "appName": "Budget App",
   "formId": "budget-campaign",
   "formName": "Budget Campaign Report Modal",
   "fullName": "John Doe",
@@ -53,7 +54,13 @@ CRM_WEBHOOK_SECRET=use-a-long-random-secret
 }
 ```
 
-Only `fullName` or `firstName`, and `email`, are required. Send every extra form field inside `details`; the CRM stores it on the lead and adds a communication note.
+Only `fullName` or `firstName`, and `email`, are required. Send `appName` to control the top-level folder name, then optionally send `projectName`, `domainName`, `subdomainName`, `campaignName`, and `sourceName` if you want a fully explicit route.
+
+The CRM will use this precedence:
+
+1. Explicit payload fields like `projectName` or `domainName`.
+2. Known app rules like `appName: Budget App` or Talentronaut website contact forms.
+3. A safe fallback derived from the app or host name.
 
 ## Recommended Vercel Setup
 
@@ -73,6 +80,7 @@ export async function POST(req: Request) {
       'X-CRM-Webhook-Secret': process.env.CRM_WEBHOOK_SECRET || '',
     },
     body: JSON.stringify({
+      appName: 'Budget App',
       formId: 'budget-campaign',
       formName: 'Budget Campaign Report Modal',
       sourceType: 'Website',
@@ -122,6 +130,7 @@ await fetch('https://<crm-domain>/api/webhooks/leads', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
+    appName: 'Budget App',
     formId: 'budget-campaign',
     formName: 'Budget Campaign Report Modal',
     fullName,
@@ -141,20 +150,21 @@ This is easier, but less protected because any allowed browser origin can submit
 For each new website or product form:
 
 1. Add the website origin to `CRM_ALLOWED_ORIGINS`.
-2. Send `projectName`, `domainName`, `subdomainName`, `campaignName`, and `sourceName` if you want a custom folder path.
+2. Send `appName` for the product or website, and add `projectName`, `domainName`, `subdomainName`, `campaignName`, and `sourceName` if you want a custom folder path.
 3. Send product-specific fields under `details`.
 
 Example:
 
 ```json
 {
+  "appName": "Talentronaut Website",
   "formId": "ai-consulting-contact",
   "formName": "AI Consulting Contact Form",
   "fullName": "Priya Shah",
   "email": "priya@example.com",
   "phone": "+91 9000000000",
   "projectName": "Talentronaut",
-  "domainName": "AI & SaaS Solutions",
+  "domainName": "Talentronaut",
   "subdomainName": "AI Consulting",
   "campaignName": "Website Leads",
   "sourceName": "talentronaut.in/contact",

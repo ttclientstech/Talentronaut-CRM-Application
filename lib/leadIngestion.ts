@@ -35,7 +35,7 @@ const ROUTING_RULES: Array<{
         taxonomy: {
             projectName: 'Talentronaut',
             domainName: 'Budget App',
-            subdomainName: 'Lead Forms',
+            subdomainName: 'Budget Campaign Forms',
             campaignName: 'Budget Campaign',
             sourceName: 'Project Report Modal',
         },
@@ -44,11 +44,11 @@ const ROUTING_RULES: Array<{
         matches: ({ formId, sourceUrl, hostname }) =>
             formId.includes('contact') &&
             (hostname === 'talentronaut.in' ||
-                hostname === 'www.talentronaut.in' ||
+            hostname === 'www.talentronaut.in' ||
                 sourceUrl.includes('talentronaut')),
         taxonomy: {
             projectName: 'Talentronaut',
-            domainName: 'Talentronaut Website',
+            domainName: 'Talentronaut',
             subdomainName: 'Contact Forms',
             campaignName: 'Contact Us',
             sourceName: 'Main Website Contact Form',
@@ -117,6 +117,21 @@ function toTitleCase(value: string) {
         .join(' ');
 }
 
+function buildFallbackTaxonomy(payload: LeadIngestionPayload) {
+    const hostname = getHostname(cleanString(payload.sourceUrl));
+    const appName = cleanString(payload.appName) || cleanString(payload.formName) || toTitleCase(hostname);
+    const formName = cleanString(payload.formName);
+    const sourceLabel = hostname || DEFAULT_TAXONOMY.sourceName;
+
+    return {
+        projectName: appName.toLowerCase().includes('talentronaut') ? 'Talentronaut' : DEFAULT_TAXONOMY.projectName,
+        domainName: appName || DEFAULT_TAXONOMY.domainName,
+        subdomainName: formName || DEFAULT_TAXONOMY.subdomainName,
+        campaignName: formName || DEFAULT_TAXONOMY.campaignName,
+        sourceName: sourceLabel,
+    };
+}
+
 function splitName(payload: LeadIngestionPayload) {
     const firstName = cleanString(payload.firstName);
     const lastName = cleanString(payload.lastName);
@@ -139,14 +154,7 @@ function getTaxonomy(payload: LeadIngestionPayload) {
     const productName = (cleanString(payload.appName) || cleanString(payload.formName)).toLowerCase();
     const hostname = getHostname(sourceUrl);
     const matchedRule = ROUTING_RULES.find((rule) => rule.matches({ formId, sourceUrl, hostname, productName }));
-    const derivedName = cleanString(payload.appName) || cleanString(payload.formName) || toTitleCase(hostname);
-
-    const base = matchedRule?.taxonomy || {
-        ...DEFAULT_TAXONOMY,
-        domainName: derivedName ? `${derivedName} Leads` : DEFAULT_TAXONOMY.domainName,
-        campaignName: cleanString(payload.formName) || DEFAULT_TAXONOMY.campaignName,
-        sourceName: hostname || DEFAULT_TAXONOMY.sourceName,
-    };
+    const base = matchedRule?.taxonomy || buildFallbackTaxonomy(payload);
 
     return {
         projectName: cleanString(payload.projectName) || base.projectName,
@@ -270,12 +278,14 @@ export async function ingestExternalLead(payload: LeadIngestionPayload) {
             sourceType,
             sourceUrl: cleanString(payload.sourceUrl) || existingLead.sourceUrl,
             source: source._id,
+            company: cleanString(payload.company) || existingLead.company,
             details: {
                 ...(existingLead.details ? Object.fromEntries(existingLead.details) : {}),
                 ...(payload.details || {}),
                 formId: cleanString(payload.formId) || undefined,
                 formName: cleanString(payload.formName) || undefined,
                 whatsapp: cleanString(payload.whatsapp) || undefined,
+                appName: cleanString(payload.appName) || undefined,
             },
         });
         existingLead.remarks.push({
@@ -308,6 +318,7 @@ export async function ingestExternalLead(payload: LeadIngestionPayload) {
             formId: cleanString(payload.formId) || undefined,
             formName: cleanString(payload.formName) || undefined,
             whatsapp: cleanString(payload.whatsapp) || undefined,
+            appName: cleanString(payload.appName) || undefined,
         },
         remarks: [{
             note,
