@@ -2,6 +2,14 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+This CRM is authenticated with the Talentronaut Workspace access code flow.
+To make that work, set these environment variables in the CRM app:
+
+- `WORKSPACE_AUTH_URL` - Base URL of the Talentronaut Workspace app, for example `https://workspace.talentronaut.in`
+- `TOOL_AUTH_SHARED_SECRET` - Shared secret used by the CRM and workspace to verify tool access
+
+The workspace must also have the CRM tool enabled for the user in its `ToolAccess` list.
+
 First, run the development server:
 
 ```bash
