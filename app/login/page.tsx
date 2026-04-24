@@ -34,7 +34,7 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                setError('Invalid access code. Please try again.');
+                setError(result.error === 'CredentialsSignin' ? 'Invalid access code or CRM access denied. Please try again.' : result.error);
             } else if (result?.ok) {
                 // Immediately fetch the session to get the role — don't rely on useEffect
                 const { getSession } = await import('next-auth/react');
@@ -121,9 +121,9 @@ export default function LoginPage() {
                                     required
                                     className="block w-full rounded-lg border border-border bg-secondary py-3 pl-10 pr-3 text-foreground placeholder:text-gray-400 focus:border-primary focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm"
                                     placeholder="ENTER CODE"
-                                    value={token}
-                                    onChange={(e) => setToken(e.target.value)}
-                                />
+                                value={token}
+                                onChange={(e) => setToken(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                            />
                             </div>
                         </div>
 

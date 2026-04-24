@@ -1,10 +1,17 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import dbConnect from "@/lib/db";
-import User from "@/models/User";
-import ToolAccess from "@/models/ToolAccess";
 
 import { NextAuthOptions } from "next-auth";
+
+const DEFAULT_SHARED_SECRET = "talentronaut-tool-auth-dev";
+
+function getWorkspaceAuthBaseUrl() {
+    return process.env.WORKSPACE_AUTH_URL || "http://localhost:3000";
+}
+
+function getSharedSecret() {
+    return process.env.TOOL_AUTH_SHARED_SECRET || DEFAULT_SHARED_SECRET;
+}
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -14,60 +21,41 @@ export const authOptions: NextAuthOptions = {
                 accessCode: { label: "Access Code", type: "password" },
             },
             async authorize(credentials) {
-                console.log('--- Auth Authorize Call ---');
-                console.log('Credentials provided:', credentials);
                 if (!credentials?.accessCode) {
-                    console.log('No accessCode provided');
                     throw new Error('Please provide your access code');
                 }
-                await dbConnect();
-                console.log('DB Connected');
 
-                // Find user directly by accessCode
-                const user = await User.findOne({ accessCode: credentials.accessCode });
-                console.log('User found in DB:', user ? user.email : 'NOT FOUND');
+                const response = await fetch(`${getWorkspaceAuthBaseUrl().replace(/\/$/, "")}/api/tools/authorize`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Tool-Auth-Secret": getSharedSecret(),
+                    },
+                    body: JSON.stringify({
+                        accessCode: credentials.accessCode,
+                        toolId: "crm",
+                    }),
+                    cache: "no-store",
+                });
 
-                if (!user) {
-                    console.log('Auth check failed: User not found with code', credentials.accessCode);
-                    throw new Error('Invalid Access Code');
+                let data: any = null;
+                try {
+                    data = await response.json();
+                } catch {
+                    data = null;
                 }
 
-                const userId = user._id.toString();
-                console.log(`Auth check for: ${user.email} (Role: ${user.role})`);
-
-                // RBAC Check
-                let authorized = false;
-                if (user.role === 'Admin') {
-                    authorized = true;
-                } else {
-                    // Check if user has access to the "crm" tool
-                    const crmAccess = await ToolAccess.findOne({ toolId: 'crm' });
-                    if (crmAccess) {
-                        const hasAccess = crmAccess.accessList && crmAccess.accessList.some((id: any) => id.toString() === userId);
-
-                        if (hasAccess) {
-                            authorized = true;
-                            console.log(`User ${user.email} authorized for CRM access`);
-                        } else {
-                            console.log(`User ${user.email} not in CRM access list`);
-                        }
-                    } else {
-                        console.log('Warning: "crm" ToolAccess record not found in database');
-                    }
+                if (!response.ok || !data?.success || !data?.allowed || !data?.user) {
+                    throw new Error(data?.error || "Unauthorized: You do not have access to the CRM. Please contact an admin.");
                 }
-
-                if (!authorized) {
-                    throw new Error('Unauthorized: You do not have access to the CRM. Please contact an admin.');
-                }
-
-                // Roles are already Admin, Lead, Member in Workspace. Keep them identical.
-                const mappedRole = user.role;
 
                 return {
-                    id: userId,
-                    name: user.name,
-                    email: user.email,
-                    role: mappedRole
+                    id: data.user.id,
+                    name: data.user.name,
+                    email: data.user.email,
+                    role: data.user.role,
+                    workspaceUserId: data.user.id,
+                    image: data.user.profilePicture || undefined,
                 };
             },
         }),
@@ -77,6 +65,7 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = user.role;
                 token.id = user.id;
+                token.workspaceUserId = user.workspaceUserId || user.id;
             }
             return token;
         },
@@ -84,6 +73,7 @@ export const authOptions: NextAuthOptions = {
             if (session?.user) {
                 session.user.role = token.role as string;
                 (session.user as any).id = token.id as string;
+                session.user.workspaceUserId = token.workspaceUserId as string;
             }
             return session;
         },

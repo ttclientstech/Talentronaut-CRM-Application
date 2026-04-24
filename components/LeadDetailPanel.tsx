@@ -500,5 +500,6 @@ export default function LeadDetailPanel({ leadId, onClose, onDeleted }: Props) {
 
             </div>
         </div>
+        
     );
 }
