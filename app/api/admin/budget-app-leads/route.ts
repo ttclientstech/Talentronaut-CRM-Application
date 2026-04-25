@@ -5,6 +5,7 @@ import Source from '@/models/Source';
 import Campaign from '@/models/Campaign';
 import Subdomain from '@/models/Subdomain';
 import Domain from '@/models/Domain';
+import '@/models/User';
 
 const BUDGET_DOMAIN_NAME = 'Talentronaut-budget-application-leads';
 
@@ -34,7 +35,11 @@ export async function GET() {
             campaign: { $in: campaigns.map((c) => c._id) },
         }).select('_id');
 
-        const query = sources.length > 0 ? { source: { $in: sources.map((s) => s._id) } } : {};
+        if (sources.length === 0) {
+            return NextResponse.json({ leads: [], total: 0 });
+        }
+
+        const query = { source: { $in: sources.map((s) => s._id) } };
 
         const leads = await Lead.find(query)
             .populate('assignedTo', 'name email')
