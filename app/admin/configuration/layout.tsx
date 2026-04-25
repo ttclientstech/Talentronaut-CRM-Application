@@ -17,6 +17,7 @@ interface TreeItem {
 export default function ProjectsLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
+    const safePathname = pathname ?? '';
     const [treeData, setTreeData] = useState<TreeItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -146,7 +147,7 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
                 }
 
                 // If currently viewing this item, redirect to parent or root
-                if (pathname.includes(item.id) || (typeof window !== 'undefined' && window.location.search.includes(item.id))) {
+                if (safePathname.includes(item.id) || (typeof window !== 'undefined' && window.location.search.includes(item.id))) {
                     router.push('/admin/configuration');
                 }
             } else {
@@ -163,7 +164,7 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
     const renderTree = (items: TreeItem[], path: number[] = [], depth = 0) => {
         return items.map((item, index) => {
             const currentPath = [...path, index];
-            const isSelected = pathname.includes(item.id) || (typeof window !== 'undefined' && window.location.search.includes(item.id));
+            const isSelected = safePathname.includes(item.id) || (typeof window !== 'undefined' && window.location.search.includes(item.id));
 
             return (
                 <div key={item.id} className="select-none">

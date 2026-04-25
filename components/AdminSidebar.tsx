@@ -26,6 +26,7 @@ const workItems = [
 
 export default function AdminSidebar() {
     const pathname = usePathname();
+    const safePathname = pathname ?? '';
     const { data: session } = useSession();
 
     const user = session?.user;
@@ -34,7 +35,7 @@ export default function AdminSidebar() {
         : 'AD';
 
     const NavItem = ({ item }: { item: { name: string; href: string; icon: React.ElementType } }) => {
-        const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+        const isActive = safePathname === item.href || (item.href !== '/admin' && safePathname.startsWith(item.href));
         return (
             <Link
                 href={item.href}

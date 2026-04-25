@@ -35,12 +35,14 @@ export default function AdminLeadDetailPage() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const queryParams = searchParams ?? new URLSearchParams();
     const isAdmin = session?.user?.role === 'Admin';
+    const leadId = typeof params?.id === 'string' ? params.id : '';
 
     // Breadcrumb info passed from the config page via query params
-    const domain = searchParams.get('domain') || '';
-    const campaign = searchParams.get('campaign') || '';
-    const source = searchParams.get('source') || '';
+    const domain = queryParams.get('domain') || '';
+    const campaign = queryParams.get('campaign') || '';
+    const source = queryParams.get('source') || '';
 
     const [lead, setLead] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function AdminLeadDetailPage() {
 
     const fetchLead = async () => {
         try {
-            const res = await fetch(`/api/leads/${params.id}`);
+            const res = await fetch(`/api/leads/${leadId}`);
             const data = await res.json();
             if (!data.lead) { setLead(null); setLoading(false); return; }
             setLead(data.lead);
@@ -96,12 +98,12 @@ export default function AdminLeadDetailPage() {
     };
 
     useEffect(() => {
-        if (params.id) { fetchLead(); fetchUsers(); }
-    }, [params.id]);
+        if (leadId) { fetchLead(); fetchUsers(); }
+    }, [leadId]);
 
     const handleStatusChange = async (status: string) => {
         setSaving(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
@@ -112,7 +114,7 @@ export default function AdminLeadDetailPage() {
 
     const handleSaveEdit = async () => {
         setSaving(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(editData),
@@ -126,7 +128,7 @@ export default function AdminLeadDetailPage() {
         e.preventDefault();
         if (!remarkNote.trim()) return;
         setAddingRemark(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -142,7 +144,7 @@ export default function AdminLeadDetailPage() {
         e.preventDefault();
         if (!meetingTitle || !meetingDate) return;
         setAddingMeeting(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ addMeeting: { title: meetingTitle, date: meetingDate, link: meetingLink } }),
@@ -154,7 +156,7 @@ export default function AdminLeadDetailPage() {
     };
 
     const handleUpdateMeetingStatus = async (meetingId: string, status: string) => {
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ updateMeeting: { meetingId, status } }),
@@ -164,7 +166,7 @@ export default function AdminLeadDetailPage() {
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to permanently delete this lead?')) return;
-        await fetch(`/api/leads/${params.id}`, { method: 'DELETE' });
+        await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
         router.back();
     };
 

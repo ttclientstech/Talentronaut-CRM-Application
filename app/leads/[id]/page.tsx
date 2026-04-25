@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
     ArrowLeft, Mail, Phone, Building2, Globe, Calendar, MessageSquare,
     Video, CheckCircle2, RefreshCw, XCircle, Loader2, Pencil, Trash2,
@@ -34,7 +34,10 @@ export default function LeadDetailPage() {
     const { data: session } = useSession();
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const queryParams = searchParams ?? new URLSearchParams();
     const isAdmin = session?.user?.role === 'Admin';
+    const leadId = typeof params?.id === 'string' ? params.id : '';
 
     const [lead, setLead] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -60,7 +63,7 @@ export default function LeadDetailPage() {
 
     const fetchLead = async () => {
         try {
-            const res = await fetch(`/api/leads/${params.id}`);
+            const res = await fetch(`/api/leads/${leadId}`);
             const data = await res.json();
             if (!data.lead) {
                 setLead(null);
@@ -95,15 +98,15 @@ export default function LeadDetailPage() {
     };
 
     useEffect(() => {
-        if (params.id) {
+        if (leadId) {
             fetchLead();
             fetchUsers();
         }
-    }, [params.id]);
+    }, [leadId]);
 
     const handleStatusChange = async (status: string) => {
         setSaving(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
@@ -114,7 +117,7 @@ export default function LeadDetailPage() {
 
     const handleSaveEdit = async () => {
         setSaving(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(editData),
@@ -128,7 +131,7 @@ export default function LeadDetailPage() {
         e.preventDefault();
         if (!remarkNote.trim()) return;
         setAddingRemark(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -150,7 +153,7 @@ export default function LeadDetailPage() {
         e.preventDefault();
         if (!meetingTitle || !meetingDate) return;
         setAddingMeeting(true);
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -166,7 +169,7 @@ export default function LeadDetailPage() {
     };
 
     const handleUpdateMeetingStatus = async (meetingId: string, status: string) => {
-        await fetch(`/api/leads/${params.id}`, {
+        await fetch(`/api/leads/${leadId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ updateMeeting: { meetingId, status } }),
@@ -176,7 +179,7 @@ export default function LeadDetailPage() {
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to permanently delete this lead?')) return;
-        await fetch(`/api/leads/${params.id}`, { method: 'DELETE' });
+        await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
         router.back();
     };
 

@@ -29,6 +29,7 @@ const workItems = [
 
 export default function SalesSidebar() {
     const pathname = usePathname();
+    const safePathname = pathname ?? '';
     const { data: session } = useSession();
 
     const user = session?.user;
@@ -38,8 +39,8 @@ export default function SalesSidebar() {
 
     const NavItem = ({ item }: { item: { name: string; href: string; icon: React.ElementType } }) => {
         const isActive =
-            (item.href === '/sales' && pathname === '/sales') ||
-            (item.href !== '/sales' && pathname.startsWith(item.href));
+            (item.href === '/sales' && safePathname === '/sales') ||
+            (item.href !== '/sales' && safePathname.startsWith(item.href));
         return (
             <Link
                 href={item.href}
